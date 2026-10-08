@@ -1,0 +1,145 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+/// Application-shell constraint for wide desktop browsers.
+///
+/// WEB PORT: this app is a phone design (390×844 reference). On a desktop
+/// browser we keep the app mobile-first — the phone screen floats as a
+/// rounded card on a branded backdrop — instead of stretching phone widgets
+/// across a 1920px window (which makes ScreenUtil scale text and layout far
+/// past what the fixed-height components budget for).
+///
+/// The backdrop keeps the brand palette but stays light: a whitish
+/// lavender-tinted base with large pre-blurred radial washes of violet
+/// `#7C3AED` and green `#0C831F` at low opacity. Painted with plain
+/// gradients so it costs the compositor nothing (no ImageFilter passes)
+/// and scrolling inside the app never re-paints it (RepaintBoundary below).
+///
+/// The constraint only rewrites the surface Size; routing, overlays,
+/// dialogs, snackbars and the ProviderScope all stay exactly as they were —
+/// MaterialApp still fills the shell card, so the Navigator and its overlay
+/// are constrained with it. Mobile and tablet browsers are completely
+/// unaffected (the shell is a pass-through there).
+class WebAppShell extends StatelessWidget {
+  const WebAppShell({required this.child, super.key});
+
+  final Widget child;
+
+  /// The app's exact design width — rendering the shell at 1.0× scale keeps
+  /// every fixed-height widget (category tabs, nav bar) inside its budget.
+  static const double _shellWidth = 390;
+
+  /// Widths below this are treated as an actual phone (largest phones are
+  /// ~440 logical px wide).
+  static const double _mobileMaxWidth = 500;
+
+  /// Vertical breathing room around the floating phone card.
+  static const int _shellVerticalMargin = 24;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!kIsWeb) {
+      return child;
+    }
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth;
+        if (width < _mobileMaxWidth) {
+          // Real phone widths keep the native full-bleed layout. Anything
+          // wider (tablet, laptop, desktop, docked devtools) always gets the
+          // fixed phone-sized card so the UI never stretches.
+          return child;
+        }
+
+        final MediaQueryData mediaQuery = MediaQuery.of(context);
+        final double shellHeight =
+            (mediaQuery.size.height - _shellVerticalMargin * 2)
+                .clamp(320.0, mediaQuery.size.height);
+        final Size shellSize = Size(_shellWidth, shellHeight);
+        final BorderRadius cardRadius = BorderRadius.circular(20);
+
+        return Container(
+          // Whitish lavender base, subtly graded so the backdrop feels airy
+          // rather than flat.
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[Color(0xFFF8F7FB), Color(0xFFECEAF4)],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            // This shell builds ABOVE MaterialApp, where no Directionality
+            // exists yet. The default AlignmentDirectional.topStart would
+            // need one and red-screen every debug run at desktop width.
+            alignment: Alignment.topLeft,
+            children: <Widget>[
+              // Brand wash — violet, upper-left.
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(-0.55, -0.65),
+                    radius: 0.85,
+                    colors: <Color>[Color(0x337C3AED), Color(0x007C3AED)],
+                  ),
+                ),
+              ),
+              // Brand wash — green, lower-right.
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0.65, 0.75),
+                    radius: 0.75,
+                    colors: <Color>[Color(0x260C831F), Color(0x000C831F)],
+                  ),
+                ),
+              ),
+              // Brand wash — faint violet echo, lower-left, for balance.
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(-0.7, 0.85),
+                    radius: 0.5,
+                    colors: <Color>[Color(0x1A7C3AED), Color(0x007C3AED)],
+                  ),
+                ),
+              ),
+              Center(
+                child: Container(
+                  width: _shellWidth,
+                  height: shellHeight,
+                  decoration: BoxDecoration(
+                    borderRadius: cardRadius,
+                    // Hairline edge so the white app card still reads
+                    // against the whitish backdrop.
+                    border: Border.all(color: const Color(0x14000000)),
+                    boxShadow: const <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0x29241B3A),
+                        blurRadius: 48,
+                        offset: Offset(0, 14),
+                      ),
+                      BoxShadow(
+                        color: Color(0x1A241B3A),
+                        blurRadius: 12,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: cardRadius,
+                    child: MediaQuery(
+                      data: mediaQuery.copyWith(size: shellSize),
+                      child: RepaintBoundary(child: child),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

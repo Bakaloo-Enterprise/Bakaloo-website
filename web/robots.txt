@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /cart
+Disallow: /auth/
+Disallow: /profile
+Disallow: /orders
+
+Sitemap: https://bakaloo.in/sitemap.xml
