@@ -951,6 +951,29 @@ class _ProgressLine extends StatelessWidget {
   }
 }
 
+/// Bottom-nav label: always one line, ignores OS text scaling above 1.0 and
+/// truncates with "…" rather than wrapping, so the bar height never changes
+/// on narrow screens or with large system fonts.
+class _NavLabelText extends StatelessWidget {
+  const _NavLabelText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.0,
+      child: Text(
+        text,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
 class _NavTabButton extends StatelessWidget {
   const _NavTabButton({
     required this.tab,
@@ -980,7 +1003,7 @@ class _NavTabButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               SizedBox(
-                width: 56.w,
+                width: double.infinity,
                 height: 38.h,
                 child: Center(
                   child: AnimatedScale(
@@ -1019,7 +1042,7 @@ class _NavTabButton extends StatelessWidget {
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 12.sp,
                 ),
-                child: Text(tab.label),
+                child: _NavLabelText(tab.label),
               ),
             ],
           ),
@@ -1057,7 +1080,7 @@ class _ExtraNavButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               SizedBox(
-                width: 56.w,
+                width: double.infinity,
                 height: 38.h,
                 child: Center(
                   child: button.iconType == NavButtonIconType.custom
@@ -1066,15 +1089,13 @@ class _ExtraNavButton extends StatelessWidget {
                 ),
               ),
               Gap(3.h),
-              Text(
-                button.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              DefaultTextStyle(
                 style: AppTextStyles.labelSmall.copyWith(
                   color: const Color(0xFF1A1A1A),
                   fontWeight: FontWeight.w600,
                   fontSize: 12.sp,
                 ),
+                child: _NavLabelText(button.label),
               ),
             ],
           ),
