@@ -1,0 +1,16 @@
+{
+  "framework": null,
+  "installCommand": "echo skip",
+  "buildCommand": "bash scripts/vercel_build.sh",
+  "outputDirectory": "build/web",
+  "rewrites": [
+    { "source": "/api/v1/:path*", "destination": "https://api.bakaloo.in/api/v1/:path*" },
+    { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(flutter_service_worker.js|index.html|manifest.json|flutter_bootstrap.js)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    }
+  ]
+}
