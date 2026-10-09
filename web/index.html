@@ -90,7 +90,7 @@
         if (!/Android/i.test(ua)) return;
         if (u.searchParams.get('noapp') === '1') return;
         if (!/^\/(cart|products?|orders)(\/|$)/.test(u.pathname)) return;
-        if (u.searchParams.get('utm_source') !== 'whatsapp' && !u.searchParams.get('wcr')) return;
+        var fromWa = u.searchParams.get('utm_source') === 'whatsapp' || !!u.searchParams.get('wcr');
         var fb = new URL(location.href); fb.searchParams.set('noapp', '1');
         var intent = 'intent://' + u.host + u.pathname + u.search + '#Intent;scheme=https;package=com.bakaloo.india;S.browser_fallback_url=' + encodeURIComponent(fb.toString()) + ';end';
         window.addEventListener('DOMContentLoaded', function () {
@@ -100,7 +100,7 @@
           a.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483647;padding:14px;border-radius:10px;background:#16a34a;color:#fff;font:600 16px sans-serif;text-align:center;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.3)';
           document.body.appendChild(a);
         });
-        location.replace(intent);
+        if (fromWa) location.replace(intent);
       } catch (e) {}
     })();
   </script>
