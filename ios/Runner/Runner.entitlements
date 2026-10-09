@@ -4,5 +4,10 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:bakaloo.in</string>
+		<string>applinks:www.bakaloo.in</string>
+	</array>
 </dict>
 </plist>

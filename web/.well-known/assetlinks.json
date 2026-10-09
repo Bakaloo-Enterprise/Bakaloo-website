@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bakaloo.india",
+      "sha256_cert_fingerprints": [
+        "D4:65:32:3E:8A:65:51:29:74:87:93:29:78:FE:3B:D0:77:8E:C7:60:D2:3F:D9:50:04:CE:7C:27:9A:28:90:5D"
+      ]
+    }
+  }
+]
