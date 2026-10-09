@@ -29,6 +29,9 @@ abstract class OrderEntity with _$OrderEntity {
     // that's COD or ONLINE. 0 for orders placed before this feature, or
     // where the customer never used the toggle.
     @Default(0) double walletAmountUsed,
+    // Itemised bill built by the backend (discounts by source, every fee,
+    // GST split, wallet/Razorpay/cash split). Empty on older responses.
+    @Default(<String, dynamic>{}) Map<String, dynamic> bill,
     String? razorpayPaymentId,
     String? couponCode,
     DateTime? deliveredAt,

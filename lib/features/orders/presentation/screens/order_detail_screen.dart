@@ -31,19 +31,6 @@ import 'package:bakaloo_flutter_app/routing/route_names.dart';
 import 'package:bakaloo_flutter_app/shared/widgets/cancel_order_sheet.dart';
 import 'package:bakaloo_flutter_app/shared/widgets/safe_product_image.dart';
 
-/// Title-cases a snake/enum-ish string, e.g. 'CASH_ON_DELIVERY' -> 'Cash On
-/// Delivery'. `_PaymentInfo` below has its own identically-named instance
-/// method for its own use; this top-level one is for `_PriceBreakdown`'s
-/// "Balance due (Method)" label, which isn't part of that class.
-String _prettyText(String value) {
-  return value.trim().toLowerCase().split('_').map((part) {
-    if (part.isEmpty) {
-      return '';
-    }
-    return '${part[0].toUpperCase()}${part.substring(1)}';
-  }).join(' ');
-}
-
 class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({
     required this.id,
@@ -853,9 +840,96 @@ class _PriceBreakdown extends StatelessWidget {
 
   final OrderEntity order;
 
+  static double _num(Object? v) => v is num ? v.toDouble() : 0;
+
   @override
   Widget build(BuildContext context) {
-    const taxAmount = 0.0;
+    final List<dynamic> lines =
+        (order.bill['lines'] as List<dynamic>?) ?? const <dynamic>[];
+    if (lines.isEmpty) return _legacy();
+
+    final Map<String, dynamic> payment =
+        (order.bill['payment'] as Map<String, dynamic>?) ??
+            const <String, dynamic>{};
+    final List<dynamic> parts =
+        (payment['parts'] as List<dynamic>?) ?? const <dynamic>[];
+    final double collect = _num(payment['collectOnDelivery']);
+    final double savings =
+        _num((order.bill['savings'] as Map<String, dynamic>?)?['total']);
+    final List<dynamic> cashback =
+        (order.bill['cashback'] as List<dynamic>?) ?? const <dynamic>[];
+
+    return Column(
+      children: <Widget>[
+        for (final dynamic raw in lines)
+          if (raw is Map<String, dynamic>) _line(raw),
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 12.h),
+          child: const Divider(height: 1, color: AppColors.divider),
+        ),
+        _PriceRow(
+          label: 'Grand total',
+          value: _num(order.bill['grandTotal']),
+          style: AppTextStyles.h3,
+        ),
+        if (parts.isNotEmpty) ...<Widget>[
+          Gap(8.h),
+          for (final dynamic raw in parts)
+            if (raw is Map<String, dynamic>)
+              _PriceRow(
+                label: '${raw['label']}'
+                    '${raw['state'] == 'PAID' ? ' · paid' : raw['state'] == 'DUE' ? ' · pay on delivery' : ''}',
+                value: _num(raw['amount']),
+                valueColor:
+                    raw['code'] == 'WALLET' ? AppColors.orderViolet : null,
+              ),
+        ],
+        if (collect > 0)
+          _PriceRow(
+            label: 'Pay on delivery',
+            value: collect,
+            style: AppTextStyles.labelLarge.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        for (final dynamic c in cashback)
+          if (c is Map<String, dynamic>)
+            _PriceRow(
+              label: c['status'] == 'CREDITED'
+                  ? 'Cashback credited to wallet'
+                  : 'Cashback (credited to wallet later)',
+              value: _num(c['amount']),
+              valueColor: AppColors.successGreen,
+            ),
+        if (savings > 0)
+          _PriceRow(
+            label: 'You saved',
+            value: savings,
+            valueColor: AppColors.successGreen,
+          ),
+      ],
+    );
+  }
+
+  Widget _line(Map<String, dynamic> line) {
+    final double amount = _num(line['amount']);
+    if (line['waived'] == true) {
+      return _PriceRow(
+        label: '${line['label']} (waived)',
+        value: _num(line['originalAmount']),
+        valueColor: AppColors.successGreen,
+      );
+    }
+    return _PriceRow(
+      label: '${line['label']}',
+      value: amount.abs(),
+      prefix: amount < 0 ? '-' : '',
+      valueColor: line['kind'] == 'discount' ? AppColors.successGreen : null,
+    );
+  }
+
+  /// Orders from an older backend (no `bill`): scalars only.
+  Widget _legacy() {
     return Column(
       children: <Widget>[
         _PriceRow(label: 'Subtotal', value: order.subtotal),
@@ -870,16 +944,11 @@ class _PriceBreakdown extends StatelessWidget {
           ),
         _PriceRow(label: 'Delivery fee', value: order.deliveryFee),
         _PriceRow(label: 'Platform fee', value: order.platformFee),
-        const _PriceRow(label: 'Tax', value: taxAmount),
         Padding(
           padding: EdgeInsets.symmetric(vertical: 12.h),
           child: const Divider(height: 1, color: AppColors.divider),
         ),
-        _PriceRow(
-          label: 'Total',
-          value: order.total,
-          style: AppTextStyles.h3,
-        ),
+        _PriceRow(label: 'Total', value: order.total, style: AppTextStyles.h3),
         if (order.walletAmountUsed > 0) ...<Widget>[
           Gap(8.h),
           _PriceRow(
@@ -890,11 +959,8 @@ class _PriceBreakdown extends StatelessWidget {
           ),
           if (order.total - order.walletAmountUsed > 0)
             _PriceRow(
-              label: 'Balance due (${_prettyText(order.paymentMethod)})',
+              label: 'Balance due',
               value: order.total - order.walletAmountUsed,
-              style: AppTextStyles.labelLarge.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
             ),
         ],
       ],

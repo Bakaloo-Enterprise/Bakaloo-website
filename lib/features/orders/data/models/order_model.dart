@@ -23,6 +23,7 @@ class OrderModel {
     required this.paymentStatus,
     required this.createdAt,
     this.walletAmountUsed = 0,
+    this.bill = const <String, dynamic>{},
     this.razorpayPaymentId,
     this.couponCode,
     this.deliveredAt,
@@ -54,6 +55,10 @@ class OrderModel {
   final String paymentMethod;
   final String paymentStatus;
   final double walletAmountUsed;
+
+  /// Server-built itemised bill (lines, payment split, savings). Empty for
+  /// responses from an older backend — the screen falls back to the scalars.
+  final Map<String, dynamic> bill;
   final String? razorpayPaymentId;
   final String? couponCode;
   final DateTime createdAt;
@@ -129,6 +134,7 @@ class OrderModel {
         <String>['deliveryAddress', 'delivery_address'],
       ),
       tracking: _readMap(json, <String>['tracking']),
+      bill: _readMap(json, <String>['bill']),
       paymentMethod: _readString(
         json,
         <String>['paymentMethod', 'payment_method'],
@@ -210,6 +216,7 @@ class OrderModel {
       paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
       walletAmountUsed: walletAmountUsed,
+      bill: Map<String, dynamic>.from(bill),
       razorpayPaymentId: razorpayPaymentId,
       couponCode: couponCode,
       createdAt: createdAt,
@@ -246,6 +253,7 @@ class OrderModel {
       'paymentMethod': paymentMethod,
       'paymentStatus': paymentStatus,
       'walletAmountUsed': walletAmountUsed,
+      'bill': bill,
       'razorpayPaymentId': razorpayPaymentId,
       'couponCode': couponCode,
       'createdAt': createdAt.toIso8601String(),
