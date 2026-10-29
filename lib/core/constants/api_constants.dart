@@ -281,6 +281,47 @@ class ApiConstants {
     );
   }
 
+  /// Our own media server (replaces Cloudinary). Override per build with
+  /// `--dart-define=MEDIA_HOST=127.0.0.1` for a local test server.
+  static const String mediaHost =
+      String.fromEnvironment('MEDIA_HOST', defaultValue: 'media.bakaloo.in');
+
+  /// Uncropped width buckets the media server pre-generates (never upscaled).
+  static const List<int> mediaWidthBuckets = <int>[160, 320, 480, 640, 960, 1280];
+
+  /// Pixel density the Cloudinary URLs asked for (`dpr_2`); kept so images are as sharp as before.
+  static const int _mediaDpr = 2;
+
+  static const Set<String> _mediaSizeDirs = <String>{
+    'master', 'icon', 'thumb', 'card', 'banner', 'detail', 'capped1080', 'avatar',
+    'w160', 'w320', 'w480', 'w640', 'w960', 'w1280',
+  };
+
+  /// For one of our own image URLs, swaps the size folder (`/master/`, `/w640/`, ...) for the smallest
+  /// uncropped bucket that has at least `width * dpr` pixels. "Fill" spots keep their framing because the
+  /// widget crops with BoxFit.cover. Returns null when [url] is not one of our resizable image URLs
+  /// (Cloudinary URLs, private/raw/WhatsApp files, other hosts).
+  static String? optimizeOwnMediaUrl(String url, {required int width}) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme || uri.host != mediaHost) {
+      return null;
+    }
+    final segments = uri.pathSegments;
+    if (segments.length < 2 || !_mediaSizeDirs.contains(segments.first)) {
+      return null;
+    }
+    final needed = width * _mediaDpr;
+    int? bucket;
+    for (final int candidate in mediaWidthBuckets) {
+      if (candidate >= needed) {
+        bucket = candidate;
+        break;
+      }
+    }
+    final dir = bucket == null ? 'master' : 'w$bucket';
+    return uri.replace(pathSegments: <String>[dir, ...segments.skip(1)]).toString();
+  }
+
   static String? optimizeCloudinaryUrl(
     String? rawUrl, {
     required int width,
@@ -290,6 +331,11 @@ class ApiConstants {
     final resolved = resolveMediaUrl(rawUrl);
     if (resolved == null || resolved.isEmpty) {
       return null;
+    }
+
+    final own = optimizeOwnMediaUrl(resolved, width: width);
+    if (own != null) {
+      return own;
     }
 
     final uri = Uri.tryParse(resolved);
@@ -382,6 +428,11 @@ class ApiConstants {
     int? height,
     String crop = 'fill',
   }) {
+    final own = optimizeOwnMediaUrl(resolvedUrl, width: width);
+    if (own != null) {
+      return own;
+    }
+
     final uri = Uri.tryParse(resolvedUrl);
     if (uri == null || !uri.hasScheme || !uri.host.contains('cloudinary.com')) {
       return resolvedUrl;
